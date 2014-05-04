@@ -60,7 +60,7 @@ categories = ["1"]
 # <codecell>
 
 # load data
-feature_names = np.array(pd.read_pickle("feature_names.pickle"))
+feature_names = np.array(pd.read_pickle("data/feature_names.pickle"))
 X_train_comps = utils.load_csr("data/X_train_comps")
 X_train_tfidf = utils.load_coo("data/X_train_tfidf")
 X_test_comps = utils.load_csr("data/X_test_comps")
