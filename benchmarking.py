@@ -31,6 +31,9 @@ from sklearn.grid_search import GridSearchCV
 from sklearn.metrics import classification_report
 from sklearn.svm import SVC
 
+# Display progress logs on stdout
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s %(levelname)s %(message)s')
 
 select_chi2=10000
 print_top10=True
@@ -48,10 +51,6 @@ X_test_tfidf = utils.load_coo("X_test_tfidf")
 y_train = utils.load_array("y_train")
 y_test = utils.load_array("y_test")
 
-
-# Display progress logs on stdout
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s %(levelname)s %(message)s')
 
 if select_chi2:
     print("Extracting %d best features by a chi-squared test" %
