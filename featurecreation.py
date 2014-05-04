@@ -7,7 +7,6 @@ from pandas import DataFrame as DF
 from scipy.sparse import csr_matrix
 from scipy.sparse import hstack
 from scipy.sparse import vstack
-from fuzzywuzzy import fuzz
 import utils
 
 import logging

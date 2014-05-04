@@ -7,7 +7,6 @@ from pandas import DataFrame as DF
 import numpy as np
 import sklearn
 from sklearn.feature_extraction.text import TfidfVectorizer
-from fuzzywuzzy import fuzz
 from unicodedata import normalize as unorm
 import scipy
 
@@ -73,6 +72,7 @@ def preprocess(string):
 
 def compare(s):
     from numpy import abs
+    from fuzzywuzzy import fuzz
     tisim = 'title_sim'
     affsim = 'aff_sim'
     cpd = 'cit_peryear_diff'
