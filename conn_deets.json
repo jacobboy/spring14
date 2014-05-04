@@ -1,0 +1,8 @@
+
+{
+    "driver": "/usr/lib/x86_64-linux-gnu/odbc/libmyodbc.so",
+    "server": "localhost",
+    "uid": "root",
+    "pwd": "",
+    "db": "speso"
+}
