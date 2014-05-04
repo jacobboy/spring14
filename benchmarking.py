@@ -42,7 +42,7 @@ print_cm=False
 
 categories = ["1"]
 
-feature_names = np.array(pd.read_pickle("feature_names.pickle"))
+feature_names = np.array(pd.read_pickle("data/feature_names.pickle"))
 X_train_comps = utils.load_csr("X_train_comps")
 X_train_tfidf = utils.load_coo("X_train_tfidf")
 X_test_comps = utils.load_csr("X_test_comps")
