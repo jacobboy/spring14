@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+# <nbformat>3.0</nbformat>
+
+# <codecell>
+
 import pandas as pd
 from pandas import Series
 from pandas import DataFrame as DF
@@ -35,42 +40,55 @@ from sklearn.svm import SVC
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(message)s')
 
-select_chi2=10000
-print_top10=True
-print_report=True
-print_cm=False
-
-categories = ["1"]
-
-feature_names = np.array(pd.read_pickle("data/feature_names.pickle"))
-X_train_comps = utils.load_csr("X_train_comps")
-X_train_tfidf = utils.load_coo("X_train_tfidf")
-X_test_comps = utils.load_csr("X_test_comps")
-X_test_tfidf = utils.load_coo("X_test_tfidf")
-
-y_train = utils.load_array("y_train")
-y_test = utils.load_array("y_test")
-
-
-if select_chi2:
-    print("Extracting %d best features by a chi-squared test" %
-          select_chi2)
-    t0 = time()
-    ch2 = SelectKBest(chi2, k=select_chi2)
-    X_train = hstack([X_train_comps, ch2.fit_transform(X_train_tfidf, y_train)])
-    X_test = hstack([X_test_comps, ch2.transform(X_test_tfidf)])
-    print("done in %fs" % (time() - t0))
-    print()
-
-
 def trim(s):
     """Trim string to fit on terminal (assuming 80-column display)"""
     """Balls to that, actually"""
     # return s if len(s) <= 80 else s[:77] + "..."
     return s
 
+# <codecell>
+
+# constants
+select_chi2=10000
+print_top10=True
+print_report=True
+print_cm=False
+save_fig=True
+
+categories = ["1"]
+
+# <codecell>
+
+# load data
+feature_names = np.array(pd.read_pickle("feature_names.pickle"))
+X_train_comps = utils.load_csr("data/X_train_comps")
+X_train_tfidf = utils.load_coo("data/X_train_tfidf")
+X_test_comps = utils.load_csr("data/X_test_comps")
+X_test_tfidf = utils.load_coo("data/X_test_tfidf")
+
+y_train = utils.load_array("data/y_train")
+y_test = utils.load_array("data/y_test")
+
+# <codecell>
+
+class L1LinearSVC(LinearSVC):
+
+    def fit(self, X, y):
+        # The smaller C, the stronger the regularization.
+        # The more regularization, the more sparsity.
+        self.transformer_ = LinearSVC(penalty="l1",
+                                      dual=False, tol=1e-3)
+        X = self.transformer_.fit_transform(X, y)
+        return LinearSVC.fit(self, X, y)
+
+    def predict(self, X):
+        X = self.transformer_.transform(X)
+        return LinearSVC.predict(self, X)
+
+# <codecell>
+
 ###############################################################################
-# Benchmark classifiers
+# Benchmark method
 def benchmark(clf):
     print('_' * 80)
     print("Training: ")
@@ -113,8 +131,29 @@ def benchmark(clf):
     clf_descr = str(clf).split('(')[0]
     return clf_descr, score, train_time, test_time
 
+# <codecell>
 
+# Finally, get to work
+
+# <codecell>
+
+if select_chi2:
+    print("Extracting %d best features by a chi-squared test" %
+          select_chi2)
+    t0 = time()
+    ch2 = SelectKBest(chi2, k=select_chi2)
+    X_train = hstack([X_train_comps, ch2.fit_transform(X_train_tfidf, y_train)])
+    X_test = hstack([X_test_comps, ch2.transform(X_test_tfidf)])
+    print("done in %fs" % (time() - t0))
+    print()
+
+# <codecell>
+
+# Gotta hold results somewhere
 results = []
+
+# <codecell>
+
 for clf, name in (
         (RidgeClassifier(tol=1e-2, solver="lsqr"), "Ridge Classifier"),
         (Perceptron(n_iter=50), "Perceptron"),
@@ -123,6 +162,8 @@ for clf, name in (
     print('=' * 80)
     print(name)
     results.append(benchmark(clf))
+
+# <codecell>
 
 for penalty in ["l2", "l1"]:
     print('=' * 80)
@@ -135,16 +176,22 @@ for penalty in ["l2", "l1"]:
     results.append(benchmark(SGDClassifier(alpha=.0001, n_iter=50,
                                            penalty=penalty)))
 
+# <codecell>
+
 # Train SGD with Elastic Net penalty
 print('=' * 80)
 print("Elastic-Net penalty")
 results.append(benchmark(SGDClassifier(alpha=.0001, n_iter=50,
                                        penalty="elasticnet")))
 
+# <codecell>
+
 # Train NearestCentroid without threshold
 print('=' * 80)
 print("NearestCentroid (aka Rocchio classifier)")
 results.append(benchmark(NearestCentroid()))
+
+# <codecell>
 
 # Input X must be non-negative
 # # Train sparse Naive Bayes classifiers
@@ -153,25 +200,13 @@ results.append(benchmark(NearestCentroid()))
 # results.append(benchmark(MultinomialNB(alpha=.01)))
 # results.append(benchmark(BernoulliNB(alpha=.01)))
 
-
-class L1LinearSVC(LinearSVC):
-
-    def fit(self, X, y):
-        # The smaller C, the stronger the regularization.
-        # The more regularization, the more sparsity.
-        self.transformer_ = LinearSVC(penalty="l1",
-                                      dual=False, tol=1e-3)
-        X = self.transformer_.fit_transform(X, y)
-        return LinearSVC.fit(self, X, y)
-
-    def predict(self, X):
-        X = self.transformer_.transform(X)
-        return LinearSVC.predict(self, X)
+# <codecell>
 
 print('=' * 80)
 print("LinearSVC with L1-based feature selection")
 results.append(benchmark(L1LinearSVC()))
 
+# <codecell>
 
 # make some plots
 
@@ -196,5 +231,30 @@ pl.subplots_adjust(bottom=.05)
 
 for i, c in zip(indices, clf_names):
     pl.text(-.3, i, c)
-pl.savefig("figures/benchmark_%d_feat" % select_chi2)
+if save_fig:
+    pl.savefig("figures/benchmark_%d_feat" % select_chi2)
 pl.show()
+
+# <codecell>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# <codecell>
+
+
