@@ -58,7 +58,7 @@ if select_chi2:
     t0 = time()
     ch2 = SelectKBest(chi2, k=select_chi2)
     X_train = hstack([X_train_comps, ch2.fit_transform(X_train_tfidf, y_train)])
-    X_test = hstack([X_test_comps, ch2.fit_transform(X_test_tfidf, y_test)])
+    X_test = hstack([X_test_comps, ch2.transform(X_test_tfidf)])
     print("done in %fs" % (time() - t0))
     print()
 
