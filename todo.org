@@ -1,0 +1,12 @@
++ [ ] parameters
+  - [ ] feature selection
+  - [ ] d reduction
+  - [ ] test different tokenizations
++ [ ] random forest
++ [ ] neural network
++ [ ] grid search
++ [-] SVC
+  - [ ] penalty
+  - [ ] loss
+  - [ ] C
+  - [X] dual = false

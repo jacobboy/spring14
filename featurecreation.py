@@ -8,6 +8,7 @@ from scipy.sparse import csr_matrix
 from scipy.sparse import hstack
 from scipy.sparse import vstack
 import utils
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 import logging
 from optparse import OptionParser
@@ -17,23 +18,11 @@ from time import time
 import numpy as np
 import sklearn
 import scipy
-import pylab as pl
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.feature_extraction.text import HashingVectorizer
-from sklearn.feature_selection import SelectKBest, chi2
-from sklearn.linear_model import RidgeClassifier
-from sklearn.svm import LinearSVC
-from sklearn.linear_model import SGDClassifier
-from sklearn.linear_model import Perceptron
-from sklearn.linear_model import PassiveAggressiveClassifier
-from sklearn.naive_bayes import BernoulliNB, MultinomialNB
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.neighbors import NearestCentroid
-from sklearn.utils.extmath import density
-from sklearn import metrics
-from sklearn.grid_search import GridSearchCV
-from sklearn.metrics import classification_report
-from sklearn.svm import SVC
+
+dataset_version = "data2"
+max_abstracts = 15000
+ab_max_feat = 50000
+max_df = .5
 
 config_file = "conn_deets.json"
 select1 = """
@@ -83,7 +72,8 @@ FROM   publications
 WHERE  article_abstract is not null
        AND article_title is not null
        AND is_book = 0
-       AND year > 1990"""
+       AND year > 1990
+       AND pmid % 2 = 0"""
 
 id = "phys_id"
 up = "up_id"
@@ -150,64 +140,43 @@ for row in cursor.execute(ab_ti_query).fetchall():
         titles.append(utils.preprocess(row[2]))
 
 conn.close()
-abstracts_10k = np.random.choice(abstracts, 10000, replace=False)
-tfidf_ab = TfidfVectorizer(analyzer='char', ngram_range=(3,5), sublinear_tf=True, max_features=50000, max_df=0.5, stop_words='english')
+
+"""
+save the world
+"""
+print "%d abstracts" % len(abstracts)
+if len(abstracts) > max_abstracts:
+    abstracts = np.random.choice(abstracts, max_abstracts, replace=False)
+print "now %d abstracts" % len(abstracts)
+    
+tfidf_ab = TfidfVectorizer(analyzer='char', ngram_range=(3,5), sublinear_tf=True, max_features=ab_max_feat, max_df=max_df, stop_words='english')
 # tfidf_ab5 = TfidfVectorizer(analyzer='char', ngram_range=(5,5), sublinear_tf=True, max_features=200, max_df=0.5, stop_words='english')
 # tfidf_ab3 = TfidfVectorizer(analyzer='char', ngram_range=(3,3), sublinear_tf=True, max_features=200, max_df=0.5, stop_words='english')
-tfidf_ti = TfidfVectorizer(analyzer='word', sublinear_tf=True, max_df=0.5, stop_words='english')
-tfidf_ab.fit(abstracts_10k)
+tfidf_ti = TfidfVectorizer(analyzer='word', sublinear_tf=True, max_df=max_df, stop_words='english')
+tfidf_ab.fit(abstracts)
 # tfidf_ab3.fit(abstracts_10k)
 # tfidf_ab5.fit(abstracts_10k)
 tfidf_ti.fit(titles)
 
-trainRows = np.random.choice(pairs.index.values, int(np.floor(3*pairs.shape[0] / 4)), replace=False)
-pairsTrain = pairs.ix[trainRows]
-ab_diffs_train = np.abs(tfidf_ab.transform(pairsTrain[ab+"_a"]) - tfidf_ab.transform(pairsTrain[ab+"_b"]))
-ti_diffs_train = np.abs(tfidf_ti.transform(pairsTrain[ti+"_a"]) - tfidf_ti.transform(pairsTrain[ti+"_b"]))
-# ab3_diffs_train = tfidf_ab3.transform(pairsTrain[ab+"_a"]) - tfidf_ab5.transform(pairsTrain[ab+"_b"])
-# ab5_diffs_train = tfidf_ab5.transform(pairsTrain[ab+"_a"]) - tfidf_ab5.transform(pairsTrain[ab+"_b"])
-pairsTest = pairs.drop(trainRows)
-ab_diffs_test = np.abs(tfidf_ab.transform(pairsTest[ab+"_a"]) - tfidf_ab.transform(pairsTest[ab+"_b"]))
-ti_diffs_test = np.abs(tfidf_ti.transform(pairsTest[ti+"_a"]) - tfidf_ti.transform(pairsTest[ti+"_b"]))
-# ab3_diffs_test = tfidf_ab3.transform(pairsTest[ab+"_a"]) - tfidf_ab5.transform(pairsTest[ab+"_b"])
-# ab5_diffs_test = tfidf_ab5.transform(pairsTest[ab+"_a"]) - tfidf_ab5.transform(pairsTest[ab+"_b"])
-X_train_df = pairsTrain.apply(utils.compare, axis=1)
-X_train_df = X_train_df - X_train_df.mean()
-X_train_df = X_train_df / X_train_df.std()
-y_train_df = (pairsTrain[un+"_a"] == pairsTrain[un+"_b"])
-X_test_df = pairsTest.apply(utils.compare, axis=1)
-X_test_df = X_test_df - X_test_df.mean()
-X_test_df = X_test_df / X_test_df.std()
-y_test_df = (pairsTest[un+"_a"] == pairsTest[un+"_b"])
 
-X_train_comps = csr_matrix(X_train_df)
-X_train_tfidf = hstack([ab_diffs_train, ti_diffs_train])
-X_train = hstack([X_train_comps, X_train_tfidf])
-y_train = np.array(y_train_df)
+ab_diffs = np.abs(tfidf_ab.transform(pairs[ab+"_a"]) - tfidf_ab.transform(pairs[ab+"_b"]))
+ti_diffs = np.abs(tfidf_ti.transform(pairs[ti+"_a"]) - tfidf_ti.transform(pairs[ti+"_b"]))
+comps_diffs_df = pairs.apply(utils.compare, axis=1)
+comps_diffs = comps_diffs_df - comps_diffs_df.mean()
+comps_diffs = np.array(comps_diffs / comps_diffs.std())
 
-X_test_comps = csr_matrix(X_test_df)
-X_test_tfidf = hstack([ab_diffs_test, ti_diffs_test])
-X_test = hstack([X_test_comps, X_test_tfidf])
-y_test = np.array(y_test_df)
+y = np.array(pairs[un+"_a"] == pairs[un+"_b"])
 
-X_all = vstack([X_train, X_test])
-y_all = np.concatenate([y_train, y_test])
+feature_names_comps = np.array(comps_diffs_df.columns.values)
+feature_names_ab = np.array(tfidf_ab.get_feature_names())
+feature_names_ti = np.array(tfidf_ti.get_feature_names())
 
-utils.save_csr("X_train_comps", X_train_comps)
-utils.save_coo("X_train_tfidf", X_train_tfidf)
-utils.save_coo("X_train", X_train)
-utils.save_array("y_train", y_train)
 
-utils.save_csr("X_test_comps", X_test_comps)
-utils.save_coo("X_test_tfidf", X_test_tfidf)
-utils.save_coo("X_test", X_test)
-utils.save_array("y_test", y_test)
+utils.save_csr("%s/X_ab" % dataset_version, ab_diffs)
+utils.save_csr("%s/X_ti" % dataset_version, ti_diffs)
+utils.save_array("%s/X_comps" % dataset_version, comps_diffs)
+utils.save_array("%s/y" % dataset_version, y)
 
-utils.save_coo("X_all", X_all)
-utils.save_array("y_all", y_all)
-
-feature_names = [x for x in X_train_df.columns.values]
-[feature_names.append(x) for x in tfidf_ab.get_feature_names()]
-[feature_names.append(x) for x in tfidf_ti.get_feature_names()]
-feature_names = Series(feature_names)
-feature_names.to_pickle("feature_names.pickle")
+utils.save_array("%s/feature_names_ab" % dataset_version, feature_names_ab)
+utils.save_array("%s/feature_names_ti" % dataset_version, feature_names_ti)
+utils.save_array("%s/feature_names_comps" % dataset_version, feature_names_comps)

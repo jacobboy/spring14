@@ -51,13 +51,13 @@ else:
 print("Loading 20 newsgroups dataset for categories:")
 print(categories if categories else "all")
 
-# data_train = fetch_20newsgroups(subset='train', categories=categories,
-#                                 shuffle=True, random_state=42,
-#                                 remove=remove)
+data_train = fetch_20newsgroups(subset='train', categories=categories,
+                                shuffle=True, random_state=42,
+                                remove=remove)
 
-# data_test = fetch_20newsgroups(subset='test', categories=categories,
-#                                shuffle=True, random_state=42,
-#                                remove=remove)
+data_test = fetch_20newsgroups(subset='test', categories=categories,
+                               shuffle=True, random_state=42,
+                               remove=remove)
 print('data loaded')
 
 categories = data_train.target_names    # for case categories == None
@@ -107,11 +107,14 @@ if select_chi2:
           select_chi2)
     t0 = time()
     ch2 = SelectKBest(chi2, k=select_chi2)
-    X_train = ch2.fit_transform(X_train, y_train)
+    ch2.fit(X_train, y_train)
+    print("fit ch2")
+    X_train = ch2.transform(X_train)
+    print("transformed train")
     X_test = ch2.transform(X_test)
+    print("transformed test")
     print("done in %fs" % (time() - t0))
     print()
-
 
 def trim(s):
     """Trim string to fit on terminal (assuming 80-column display)"""

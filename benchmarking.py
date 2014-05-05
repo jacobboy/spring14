@@ -10,11 +10,13 @@ from scipy.sparse import csr_matrix
 from scipy.sparse import hstack
 from scipy.sparse import vstack
 import utils
+from utils import trm
+from methods import get_data
+from classes import Benchmarker
+from classes import L1LinearSVC
 
 import logging
-import sys
 from time import time
-
 import numpy as np
 import sklearn
 import scipy
@@ -40,116 +42,54 @@ from sklearn.svm import SVC
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(message)s')
 
-def trim(s):
-    """Trim string to fit on terminal (assuming 80-column display)"""
-    """Balls to that, actually"""
-    # return s if len(s) <= 80 else s[:77] + "..."
-    return s
-
 # <codecell>
 
 # constants
-select_chi2=10000
-print_top10=True
+dataset_version = "data2"
+select_chi2s=10000
+print_topX=50
 print_report=True
 print_cm=False
 save_fig=True
 
 categories = ["1"]
 
-# <codecell>
+bm = Benchmarker(print_topX, print_report, print_cm)
 
-# load data
-feature_names = np.array(pd.read_pickle("data/feature_names.pickle"))
-X_train_comps = utils.load_csr("data/X_train_comps")
-X_train_tfidf = utils.load_coo("data/X_train_tfidf")
-X_test_comps = utils.load_csr("data/X_test_comps")
-X_test_tfidf = utils.load_coo("data/X_test_tfidf")
-
-y_train = utils.load_array("data/y_train")
-y_test = utils.load_array("data/y_test")
-
-# <codecell>
-
-class L1LinearSVC(LinearSVC):
-
-    def fit(self, X, y):
-        # The smaller C, the stronger the regularization.
-        # The more regularization, the more sparsity.
-        self.transformer_ = LinearSVC(penalty="l1",
-                                      dual=False, tol=1e-3)
-        X = self.transformer_.fit_transform(X, y)
-        return LinearSVC.fit(self, X, y)
-
-    def predict(self, X):
-        X = self.transformer_.transform(X)
-        return LinearSVC.predict(self, X)
-
-# <codecell>
-
-###############################################################################
-# Benchmark method
 def benchmark(clf):
-    print('_' * 80)
-    print("Training: ")
-    print(clf)
-    t0 = time()
-    clf.fit(X_train, y_train)
-    train_time = time() - t0
-    print("train time: %0.3fs" % train_time)
+    return bm.benchmark(clf)
 
-    t0 = time()
-    pred = clf.predict(X_test)
-    test_time = time() - t0
-    print("test time:  %0.3fs" % test_time)
+# <codecell>
 
-    score = metrics.f1_score(y_test, pred)
-    print("f1-score:   %0.3f" % score)
+################################################################################
+# load data
 
-    if hasattr(clf, 'coef_'):
-        print("dimensionality: %d" % clf.coef_.shape[1])
-        print("density: %f" % density(clf.coef_))
+feature_names_comps, feature_names_tfidf, X_train_comps, X_train_tfidf, X_test_comps, X_test_tfidf, y_train, y_test = get_data(dataset_version)
 
-        if print_top10 and feature_names is not None:
-            print("top 10 keywords per class:")
-            for i, category in enumerate(categories):
-                top10 = np.argsort(clf.coef_[i])[-10:]
-                print(trim("%s: %s"
-                      % (category, " ".join(feature_names[top10]))))
-        print()
 
-    if print_report:
-        print("classification report:")
-        print(metrics.classification_report(y_test, pred))
-                                            # target_names=categories))
+# <codecell>
 
-    if print_cm:
-        print("confusion matrix:")
-        print(metrics.confusion_matrix(y_test, pred))
+################################################################################
+# extract features via chi2
+# assemble X_train, X_test, and feature_names
 
-    print()
-    clf_descr = str(clf).split('(')[0]
-    return clf_descr, score, train_time, test_time
+# if select_chi2:
+print("Extracting %d best features by a chi-squared test" %
+      select_chi2)
+t0 = time()
+ch2 = SelectKBest(chi2, k=select_chi2)
+X_train_ch2 = ch2.fit_transform(X_train_tfidf, y_train)
+X_train = hstack([X_train_comps, X_train_ch2])
+X_test_ch2 = ch2.transform(X_test_tfidf)
+X_test = hstack([X_test_comps, X_test_ch2])
+feature_names_ch2 = feature_names_tfidf[ch2.get_support()]
+feature_names = np.append(feature_names_comps, feature_names_ch2)
+print("done in %fs" % (time() - t0))
+print()
 
 # <codecell>
 
 # Finally, get to work
-
-# <codecell>
-
-if select_chi2:
-    print("Extracting %d best features by a chi-squared test" %
-          select_chi2)
-    t0 = time()
-    ch2 = SelectKBest(chi2, k=select_chi2)
-    X_train = hstack([X_train_comps, ch2.fit_transform(X_train_tfidf, y_train)])
-    X_test = hstack([X_test_comps, ch2.transform(X_test_tfidf)])
-    print("done in %fs" % (time() - t0))
-    print()
-
-# <codecell>
-
-# Gotta hold results somewhere
 results = []
 
 # <codecell>
@@ -169,8 +109,7 @@ for penalty in ["l2", "l1"]:
     print('=' * 80)
     print("%s penalty" % penalty.upper())
     # Train Liblinear model
-    results.append(benchmark(LinearSVC(loss='l2', penalty=penalty,
-                                            dual=False, tol=1e-3)))
+    results.append(benchmark(LinearSVC(loss='l2', penalty=penalty, dual=False, tol=1e-3)))
 
     # Train SGD model
     results.append(benchmark(SGDClassifier(alpha=.0001, n_iter=50,
@@ -212,9 +151,9 @@ results.append(benchmark(L1LinearSVC()))
 
 indices = np.arange(len(results))
 
-results = [[x[i] for x in results] for i in range(4)]
+results = [[x[i] for x in results] for i in range(6)]
 
-clf_names, score, training_time, test_time = results
+clf_names, score, training_time, test_time, clfs, preds = results
 training_time = np.array(training_time) / np.max(training_time)
 test_time = np.array(test_time) / np.max(test_time)
 
@@ -236,19 +175,6 @@ if save_fig:
 pl.show()
 
 # <codecell>
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

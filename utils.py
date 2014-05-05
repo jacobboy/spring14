@@ -67,8 +67,11 @@ def sample_df(df, num):
     return df.ix[rows]
 
 def preprocess(string):
-    x = " ".join([text for text in string.split()])
+    x = " ".join([text for text in string.split() if not any([c.isdigit() for c in text])])
     return re.sub(ur"\p{P}+", "", x.lower())
+
+# label_indices_no_digits = [i for i, v in enumerate(tfidf_ngram.get_feature_names()) if not any(x.isdigit() for x in v)]
+# label_indices_no_digits = [i for i, v in enumerate(tfidf_ngram.get_feature_names()) if re.match('^[a-zA-Z\s]+$', v)]
 
 def compare(s):
     from numpy import abs
@@ -103,9 +106,6 @@ def compare(s):
     # x['same_coauth_count'] = len([x for x in s[coaa] if x in s[coab]])
     return x
 
-# label_indices_no_digits = [i for i, v in enumerate(tfidf_ngram.get_feature_names()) if not any(x.isdigit() for x in v)]
-# label_indices_no_digits = [i for i, v in enumerate(tfidf_ngram.get_feature_names()) if re.match('^[a-zA-Z\s]+$', v)]
-
 def save_csr(name, csr):
     if type(csr) != scipy.sparse.csr_matrix:
         raise Exception("Not a csr_matrix, is " + str(type(csr)))
@@ -134,3 +134,8 @@ def save_array(name, array):
 
 def load_array(name):
     return np.load(name+".npy")
+
+def trim(s):
+    """Trim string to fit on terminal (assuming 80-column display)"""
+    """Balls to that, actually"""
+    return s if len(s) <= 320 else s[:317] + "..."
