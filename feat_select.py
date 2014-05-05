@@ -48,14 +48,14 @@ logging.basicConfig(level=logging.INFO,
 
 # constants
 dataset_version = "data2"
-select_chi2s=[10,100,500,1000]
+select_chi2s=[10,100,500,1000, False]
 print_topX=10
 print_report=True
 print_cm=False
 save_fig=True
 show_fig=False
 use_comps=True
-use_ab=False
+use_ab=True
 use_ti=True
 test_percent=.25
 categories=["1"]
@@ -158,16 +158,17 @@ for select_chi2 in select_chi2s:
         X_train_tfidf = hstack(X_train_tfidf)
         X_test_tfidf = hstack(X_test_tfidf)
 
-        ch2 = SelectKBest(chi2, k=select_chi2)
-        ch2.fit(X_train_tfidf, y_train)
-        
-        feature_names_ch2 = feature_names_tfidf[ch2.get_support()]
-        X_train_ch2 = ch2.transform(X_train_tfidf)
-        X_test_ch2 = ch2.transform(X_test_tfidf)
+        if select_chi2:
+            ch2 = SelectKBest(chi2, k=select_chi2)
+            ch2.fit(X_train_tfidf, y_train)
 
-        feature_names.extend(feature_names_ch2)
-        X_train.append(X_train_ch2)
-        X_test.append(X_test_ch2)
+            feature_names_tfidf = feature_names_tfidf[ch2.get_support()]
+            X_train_tfidf = ch2.transform(X_train_tfidf)
+            X_test_tfidf = ch2.transform(X_test_tfidf)
+
+        feature_names.extend(feature_names_tfidf)
+        X_train.append(X_train_tfidf)
+        X_test.append(X_test_tfidf)
         
         print("done in %fs" % (time() - t1))
 

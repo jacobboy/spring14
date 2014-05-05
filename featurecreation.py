@@ -19,7 +19,7 @@ import numpy as np
 import sklearn
 import scipy
 
-dataset_version = "data2"
+dataset_version = "data3"
 max_abstracts = 15000
 ab_max_feat = 50000
 max_df = .5
@@ -149,7 +149,7 @@ if len(abstracts) > max_abstracts:
     abstracts = np.random.choice(abstracts, max_abstracts, replace=False)
 print "now %d abstracts" % len(abstracts)
     
-tfidf_ab = TfidfVectorizer(analyzer='char', ngram_range=(3,5), sublinear_tf=True, max_features=ab_max_feat, max_df=max_df, stop_words='english')
+tfidf_ab = TfidfVectorizer(analyzer='word', ngram_range=(1,2), sublinear_tf=True, max_features=ab_max_feat, max_df=max_df, stop_words='english')
 # tfidf_ab5 = TfidfVectorizer(analyzer='char', ngram_range=(5,5), sublinear_tf=True, max_features=200, max_df=0.5, stop_words='english')
 # tfidf_ab3 = TfidfVectorizer(analyzer='char', ngram_range=(3,3), sublinear_tf=True, max_features=200, max_df=0.5, stop_words='english')
 tfidf_ti = TfidfVectorizer(analyzer='word', sublinear_tf=True, max_df=max_df, stop_words='english')
