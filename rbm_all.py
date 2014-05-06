@@ -143,7 +143,7 @@ for params in [(1000, 256, 1), (100, 100, 10), (100,100,1)]:
     for estimator in estimators:
         try:
             pipeline = Pipeline([(estimator[0], estimator[1])])
-            param_grid = dict(transformer[2].items() + estimator[2].items())
+            param_grid = dict(estimator[2].items())
             print()
             print("Performing grid search...")
             print("pipeline:", [name for name, _ in pipeline.steps])
@@ -157,6 +157,7 @@ for params in [(1000, 256, 1), (100, 100, 10), (100,100,1)]:
 
             clf.fit(X_train, y_train)
             train_time = time() - t0
+            pickle.dump(clf, "_".join([name for name, _ in pipeline.steps])
             print("train time: %0.3fs" % train_time)
             print()
             print("Grid scores on development set:")
@@ -181,7 +182,6 @@ for params in [(1000, 256, 1), (100, 100, 10), (100,100,1)]:
             print(classification_report(y_true, y_pred))
             print(confusion_matrix(y_test, y_pred))
             print()
-            pickle.dump(clf, "_".join([name for name, _ in pipeline.steps])
         except Exception, e:
             print()
             print("="*80)
