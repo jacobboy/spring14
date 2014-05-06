@@ -22,7 +22,7 @@ import scipy
 
 #("char", (3,5), "aml_char")
 
-deets=[("char", (3,5), "aml_char_1000")]
+deets=[("char", (3,5), "aml_char_1000_short_ti")]
 
 for deet in deets:
 
@@ -172,7 +172,7 @@ for deet in deets:
     tfidf_ab = TfidfVectorizer(analyzer=ab_analyzer, ngram_range=ab_ngram_range, sublinear_tf=True, max_features=ab_max_feat, max_df=max_df, stop_words='english')
     # tfidf_ab5 = TfidfVectorizer(analyzer='char', ngram_range=(5,5), sublinear_tf=True, max_features=200, max_df=0.5, stop_words='english')
     # tfidf_ab3 = TfidfVectorizer(analyzer='char', ngram_range=(3,3), sublinear_tf=True, max_features=200, max_df=0.5, stop_words='english')
-    tfidf_ti = TfidfVectorizer(analyzer='word', ngram_range=(1,2), sublinear_tf=True, max_df=max_df, stop_words='english')
+    tfidf_ti = TfidfVectorizer(analyzer='word', ngram_range=(1,2), sublinear_tf=True, max_df=max_df, max_features=ab_max_feat, stop_words='english')
     tfidf_ab.fit(abstracts)
     # tfidf_ab3.fit(abstracts_10k)
     # tfidf_ab5.fit(abstracts_10k)
@@ -202,6 +202,7 @@ for deet in deets:
     utils.save_array("%s/feature_names_ab" % dataset_version, feature_names_ab)
     utils.save_array("%s/feature_names_ti" % dataset_version, feature_names_ti)
     utils.save_array("%s/feature_names_comps" % dataset_version, feature_names_comps)
+    pairs[['pmid_a', 'pmid_b', un+'_a', un+'_b']].to_pickle("%s/feature_names_comps" % dataset_version)
 
 
     text_file = open("%s/description.txt" % dataset_version, "w")
