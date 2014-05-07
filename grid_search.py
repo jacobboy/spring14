@@ -3,7 +3,7 @@ from pandas import DataFrame as DF
 from scipy.sparse import hstack
 from scipy.sparse import vstack
 from methods import get_data
-import methods
+import utils
 from pprint import pprint
 from sklearn.naive_bayes import BernoulliNB
 from sklearn import linear_model, decomposition, datasets, cross_validation
@@ -79,7 +79,7 @@ print("done assembling features in %fs" % (time() - t0))
 # Models we will use
 X_train = X_train.todense()
 X_test = X_test.todense()
-methods.save_coo('%s/X_test' % dataset_version, X_test)
+utils.save_coo('%s/X_test' % dataset_version, X_test)
 
 fitted=[]
 
@@ -165,7 +165,7 @@ rf_grd = {
     }
 
 abc_grd = {
-    'n_estimators':[25,600], # was [25,100]
+    'n_estimators':[25,500], # was [25,100]
     'base_estimator':[DecisionTreeClassifier(min_samples_split=2), DecisionTreeClassifier(min_samples_split=20)]
     }
 
