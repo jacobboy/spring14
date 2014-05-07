@@ -79,7 +79,7 @@ print("done assembling features in %fs" % (time() - t0))
 # Models we will use
 X_train = X_train.todense()
 X_test = X_test.todense()
-utils.save_coo('%s/X_test' % dataset_version, X_test)
+utils.save_array('%s/X_test' % dataset_version, X_test)
 
 fitted=[]
 
@@ -89,11 +89,11 @@ def grid_search(estimator):
     pipeline = estimator[1]
     param_grid = [estimator[2]]
     # print()
-    # print("Performing grid search...")
-    print(str(type(pipeline)))
+    print("Performing grid search for %s %s" % (t_name, e_name))
+    # print(str(type(pipeline)))
     # print("parameters:")
     pprint(param_grid)
-    clf = GridSearchCV(pipeline, param_grid, n_jobs=4, verbose=0, scoring=scoring)
+    clf = GridSearchCV(pipeline, param_grid, n_jobs=-1, verbose=0, scoring=scoring)
     # print('_' * 80)
     # print("Training: ")
     # print(clf)
@@ -118,7 +118,6 @@ def grid_search(estimator):
     f1 = f1_score(y_test, y_pred)
     acc = accuracy_score(y_test, y_pred)
     prec = precision_score(y_test, y_pred)
-    fitted.append((f1, acc, prec, clf, clf.best_estimator_, y_pred))
     print("f1-score:   %0.3f" % f1)
     print("accuracy:   %0.3f" % acc)
     print("precision:   %0.3f" % prec)
@@ -129,7 +128,10 @@ def grid_search(estimator):
     # print("The scores are computed on the full evaluation set.")
     # print()
     # print(classification_report(y_true, y_pred))
-    print(confusion_matrix(y_test, y_pred))
+    cm = confusion_matrix(y_test, y_pred)
+    print(cm)
+    true_true = cm[1,1]
+    fitted.append((f1, acc, prec, clf, clf.best_estimator_, y_pred, true_true))
     # print()
     # except Exception, e:
     #     print()
