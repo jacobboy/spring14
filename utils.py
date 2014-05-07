@@ -1,6 +1,5 @@
 import json
 import re
-import iopro.pyodbc as pyodbc
 import pandas as pd
 from pandas import Series
 from pandas import DataFrame as DF
@@ -119,9 +118,6 @@ def load_csr(name):
     return csr_matrix((npz['data'], npz['indices'], npz['indptr']), shape=(npz['shape'][0], npz['shape'][1]))
 
 def save_coo(name, coo):
-    if type(coo) != scipy.sparse.coo.coo_matrix:
-        raise Exception("Not a coo_matrix, is " + str(type(coo)))
-    from scipy.sparse import coo_matrix
     save_csr(name, coo.tocsr())
 
 def load_coo(name):
